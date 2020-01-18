@@ -1,0 +1,413 @@
+---
+title: "SDS_HW2_G40"
+author: "Debodeep Banerjee (1901253) and Trina Sahoo (1901254)"
+date: ''
+output:
+  html_document: default
+  pdf_document: default
+---
+```{r, echo=FALSE}
+knitr::opts_chunk$set(error = TRUE)
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#1. Importing the Dataset
+
+The dataset depend on the right brain and left brain. The problem is to evaluate the dependency between the cortical region.
+
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#########################################Importing the Data############################################
+
+data=load("~/Sapienza Learning Materials/SDS 1 Homework/sdshw2/hw2_data.RData")
+data=mts
+D=ncol(data)
+n=nrow(data)
+
+```
+
+
+# 2. Application of simultaneous bootstrapped confidence intervals for a generic association measure row
+
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+###############simultaneous bootstrapped confidence intervals for a generic association measure row################## 
+
+#Correlation matrix
+
+R_cap=cor(data)
+
+# Dimension of the correlation matrix
+dim(cor(data)) 
+
+# Number of bootstraps
+B = 1000
+delta_b = rep(NA, B)
+
+for (b in 1:B){
+  idx = sample(1:n, replace = T)
+  bsamp   = data[idx,]        # bootstrap sample
+  R_star  = cor(bsamp)        # save
+  delta_b[b] = sqrt(n)*(max(abs(R_star-R_cap)))
+}
+
+# Bootstrap ECDF > G*(t)
+
+Gstar = ecdf((1/B)*(delta_b))
+par(mfrow=c(1,2))
+plot(Gstar, main = "")
+hist(delta_b,prob=TRUE, breaks = 25, col = "orchid", border = "white",
+  
+     main = "Bootstrap approximation \n to the sampling distribution")
+lines(density(delta_b), col="blue", lwd=2) # add a density estimate with defaults
+
+
+```
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Bootstrap standard error
+se_boot <- sqrt(var(delta_b))
+se_boot
+
+
+# Bootstrap /  CI / 95%
+alpha=0.05
+t_alpha <- quantile(delta_b, 1-alpha)
+t_alpha
+
+
+lb=R_cap-(t_alpha/sqrt(n))
+ub=R_cap+(t_alpha/sqrt(n))
+
+# Write the function
+
+R_mat=function(epsilon){
+  Pmatrix = (lb>epsilon)+(ub< -(epsilon))
+  Pmatrix
+  sig_values=which(Pmatrix==1, arr.in= TRUE)
+  # code to get the desired rowname and colname
+  data1 <- data.frame(matrix(ncol = 3))
+  x <- c('from','to' , "Correlation")
+  
+  i<-1
+  #data1=data.frame(p1=character(),p2=character(),p3)
+  while (i <= nrow(sig_values)){
+    data1<-rbind(data1,c(rownames(R_cap)[sig_values[i,1]],colnames(R_cap)[sig_values[i,2]],
+                         R_cap[sig_values[i,1],sig_values[i,2]]))
+    i<-i+1
+  }
+  
+  colnames(data1) <- x
+  
+  data1<-data1[-1,]
+  data1$Correlation <- as.numeric(as.character(data1$Correlation))
+  return(data1)
+}
+table=R_mat(0.69)
+head(table)
+```
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#3. Graph Analysis
+
+The below graph shows the connectivity between different portions of our brain. Here, the value of epsilon=0.69 and the connectivity between the hemisphere is clear and specific. 
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#####  Plot the data #####
+library(ggraph)
+library(igraph)
+
+only_sig <- table[abs(table$Correlation) !=1, ]
+new_g <- graph_from_data_frame(only_sig, F)
+
+correlation = cut_number((only_sig$ "Correlation"), 4)
+col = c("#E1AF00", "#EBCC2A", "#78B7C5", "#3B9AB2")
+names(col) = levels(correlation)
+ggraph(new_g, layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(aes(col=correlation))+ 
+  geom_node_point() + 
+  geom_node_text(aes(label = name), repel=TRUE)+
+  geom_
+
+```
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+##3.1 Graph analysis at $\epsilon$=0.40 and $\epsilon$=0.55
+
+As the value of epsilon decreases the connectivity of between and within hemisphere increases.
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+table=R_mat(0.40)
+head(table)
+#####  Plot the data #####
+
+only_sig <- table[abs(table$Correlation) !=1, ]
+new_g <- graph_from_data_frame(only_sig, F)
+
+correlation = cut_number((only_sig$ "Correlation"), 4)
+col = c("#E1AF00", "#EBCC2A", "#78B7C5", "#3B9AB2")
+names(col) = levels(correlation)
+
+ggraph(new_g, layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(aes(col=correlation))+ 
+  geom_node_point() + 
+  geom_node_text(aes(label = name), repel=TRUE)
+
+table=R_mat(0.65)
+head(table)
+#####  Plot the data #####
+
+only_sig <- table[abs(table$Correlation) !=1, ]
+new_g <- graph_from_data_frame(only_sig, F)
+
+correlation = cut_number((only_sig$ "Correlation"), 4)
+col = c("#E1AF00", "#EBCC2A", "#78B7C5", "#3B9AB2")
+names(col) = levels(correlation)
+ggraph(new_g, layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(aes(col=correlation))+ 
+  geom_node_point() + 
+  geom_node_text(aes(label = name), repel=TRUE)
+
+
+```
+
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### Remarks
+
+In this case we've used the pearson correlation method. The connectivity amongst the hemisphere and the value of the epsilon are inversely related. As the value of epsilon increases the connectivity between the hemisphere decreases and with the small value of epsilon the connectivity between the hemisphere is more. Moreover, if the value of the epsilon is really high, there exists no connectivity between and within the hemisphere.
+
+
+# 4. Consider the partial correlation: Performing the same task using SIN package
+
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+###################### Partial Correlation########################
+
+
+library(SIN)
+out=sinUG(R_cap,nrow(data))
+par(mfrow = c(1,2))
+alpha = 0.05
+E.SIN = getgraph(out, alpha)
+
+G.SIN = graph.adjacency(E.SIN, mode = "undirected")
+ggraph(G.SIN, layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(aes(col= 'black'))+ 
+  geom_node_point() + 
+  geom_node_text(aes(label = name), repel=TRUE)
+alpha = 0.01
+E.SIN = getgraph(out, alpha)
+
+G.SIN = graph.adjacency(E.SIN, mode = "undirected")
+#correlation = cut_number((only_sig$ "correlation"), 4)
+col = c("#E1AF00", "#EBCC2A", "#78B7C5", "#3B9AB2")
+#names(col) = levels(correlation)
+ggraph(G.SIN, layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(aes(col='red'))+ 
+  geom_node_point() + 
+  geom_node_text(aes(label = name), repel=TRUE)
+
+```
+
+### Remarks:
+Like, with the ci s we are chopping the lower correlation values but with the sin package we are chopping statically insignificant values.
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 5. Additional exploration
+## 5.1 Exploring the Right brain
+
+As mentioned and shown in the above graph the connectivity between the hemisphere is quite clear. But in order to get a more clear picture of within the hemisphere we consider the right brain separately. The espilon value the same as 0.69 but the connectivity is more strong within the right hemisphere.
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+                 ######################## Exploration #########################
+
+                         ### Exploring the right portion of our brain ###
+
+Data_right=data[,1:39]
+R_cap.right=cor(Data_right)
+
+# Number of bootstraps
+B = 1000
+delta_b = rep(NA, B)
+
+for (b in 1:B){
+  idx = sample(1:n, replace = T)
+  bsamp   = Data_right[idx,]        # bootstrap sample
+  R_star  = cor(bsamp)        # save
+  delta_b[b] = sqrt(n)*(max(abs(R_star-R_cap.right)))
+}
+
+# Bootstrap /  CI / 95%
+alpha=0.05
+t_alpha <- quantile(delta_b, 1-alpha)
+t_alpha
+
+
+lb.right=R_cap.right-(t_alpha/sqrt(n))
+ub.right=R_cap.right+(t_alpha/sqrt(n))
+
+# Write the function
+
+R_mat=function(epsilon){
+  Pmatrix = (lb.right>epsilon)+(ub.right< -(epsilon))
+  Pmatrix
+  sig_values=which(Pmatrix==1, arr.in= TRUE)
+  # code to get the desired rowname and colname
+  data1 <- data.frame(matrix(ncol = 3))
+  x <- c('from','to' , "Correlation")
+  
+  i<-1
+  #data1=data.frame(p1=character(),p2=character(),p3)
+  while (i <= nrow(sig_values)){
+    data1<-rbind(data1,c(rownames(R_cap.right)[sig_values[i,1]],colnames(R_cap.right)[sig_values[i,2]],
+                         R_cap.right[sig_values[i,1],sig_values[i,2]]))
+    i<-i+1
+  }
+  
+  colnames(data1) <- x
+  
+  data1<-data1[-1,]
+  data1$Correlation <- as.numeric(as.character(data1$Correlation))
+  return(data1)
+}
+table.right=R_mat(0.69)
+
+
+only_sig.right <- table.right[abs(table.right$Correlation) !=1, ]
+new_g.right <- graph_from_data_frame(only_sig.right, F)
+
+correlation.right = cut_number((only_sig.right$ "Correlation"), 4)
+col = c("#E1AF00", "#EBCC2A", "#78B7C5", "#3B9AB2")
+names(col) = levels(correlation.right)
+
+par(mfrow=c(1,2))
+ggraph(new_g.right, layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(aes(col=correlation.right))+ 
+  geom_node_point() + 
+  geom_node_text(aes(label = name), repel=TRUE)
+```
+
+## 5.2 Exploring the Left brain
+
+Similarly, the connectivity within the left hemisphere is more strong and clearly visable, keeping the value of the epsilon same.
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+                           ### Exploring the left portion of our brain ###
+
+Data_left=data[,40:81]
+R_cap.left=cor(Data_left)
+
+# Number of bootstraps
+B = 1000
+delta_b = rep(NA, B)
+
+for (b in 1:B){
+  idx = sample(1:n, replace = T)
+  bsamp   = Data_left[idx,]        # bootstrap sample
+  R_star  = cor(bsamp)        # save
+  delta_b[b] = sqrt(n)*(max(abs(R_star-R_cap.left)))
+}
+
+# Bootstrap /  CI / 95%
+alpha=0.05
+t_alpha <- quantile(delta_b, 1-alpha)
+t_alpha
+
+
+lb.left=R_cap.left-(t_alpha/sqrt(n))
+ub.left=R_cap.left+(t_alpha/sqrt(n))
+
+# Write the function
+
+R_mat=function(epsilon){
+  Pmatrix = (lb.left>epsilon)+(ub.left< -(epsilon))
+  Pmatrix
+  sig_values=which(Pmatrix==1, arr.in= TRUE)
+  # code to get the desired rowname and colname
+  data1 <- data.frame(matrix(ncol = 3))
+  x <- c('from','to' , "Correlation")
+  
+  i<-1
+  #data1=data.frame(p1=character(),p2=character(),p3)
+  while (i <= nrow(sig_values)){
+    data1<-rbind(data1,c(rownames(R_cap.left)[sig_values[i,1]],colnames(R_cap.left)[sig_values[i,2]],
+                         R_cap.left[sig_values[i,1],sig_values[i,2]]))
+    i<-i+1
+  }
+  
+  colnames(data1) <- x
+  
+  data1<-data1[-1,]
+  data1$Correlation <- as.numeric(as.character(data1$Correlation))
+  return(data1)
+}
+table.left=R_mat(0.69)
+
+
+only_sig.left <- table.left[abs(table.left$Correlation) !=1, ]
+new_g.left <- graph_from_data_frame(only_sig.left, F)
+
+correlation.left = cut_number((only_sig.left$ "Correlation"), 4)
+
+col = c("#E1AF00", "#EBCC2A", "#78B7C5", "#3B9AB2")
+names(col) = levels(correlation.left)
+ggraph(new_g.left, layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(aes(col=correlation.left))+ 
+  geom_node_point() + 
+  geom_node_text(aes(label = name), repel=TRUE)
+
+```
+
+```{r  include=TRUE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Some numerical comparisons between the left and the right portions.
+
+### Lenth:
+length=c(length(only_sig.left$Correlation),length(only_sig.right$Correlation))
+
+### Maximum and minimum
+max=c(max(only_sig.left$Correlation),max(only_sig.right$Correlation))
+min=c(min(only_sig.left$Correlation),min(only_sig.right$Correlation))
+
+dataframe=data.frame(length,max,min)
+rownames(dataframe)=c("Left_Part","Right_Part")
+dataframe
+```
+
+## Conclusion
+
+We addressed the issue of dependency between the cortical region.  By analysing the graph the dependency between the cortical region is established. The connections are significantly high toward the right hemisphere while exploring between and within the hemisphere. It can also be concluded from the graphs that the correlation within the hemisphere is higher than the correlation between the hemisphere.Moreover, we see that the maximum corrrelation between the nodes of the left part is higher than the right part. Again, the right part shows lower negative correlation than the left part.
+
+
+
